@@ -1,0 +1,40 @@
+#encoding=utf-8
+import requests
+from bs4 import BeautifulSoup
+import asyncio
+import aiohttp
+def crawl_xiladaili(n):
+    ip_url_0='http://www.xiladaili.com/gaoni/'
+    for i in range(1,n):
+        ip_url=ip_url_0+str(i)+r'/'
+        print(ip_url+' is crawling')
+        resp=requests.get(ip_url).text 
+        soup=BeautifulSoup(resp,'lxml')
+        for ips in soup.find_all('tr'):
+            if ips.find('td'):
+                ip=ips.find('td').string
+                print('find,',ip)
+                yield ip
+
+def get_proxies(func,n):
+    ip_proxies=[]
+    for ip_proxy in func(n):
+        ip_proxies.append(ip_proxy)
+    return ip_proxies
+        
+async def single_ip_test(test_ip):
+    test_ip='http://'+test_ip
+    try:         
+        async with aiohttp.ClientSession() as session:
+            async with session.get('http://www.cffex.com.cn/sj/ccpm/202004/03/IF.xml?id=65',proxy=test_ip,timeout=10) as test_resp:
+                await test_resp.read()
+                if test_resp.status==200:
+                    print('yes',test_ip)
+    except Exception as e:            
+        print('no',test_ip)
+            
+if __name__=='__main__':
+    ip_proxies=get_proxies(crawl_xiladaili,10)
+    tasks=[single_ip_test(ip_proxy) for ip_proxy in ip_proxies]
+    loop=asyncio.get_event_loop()    
+    loop.run_until_complete(asyncio.wait(tasks))
